@@ -191,9 +191,19 @@ async function findNearest() {
  <main><nav aria-label={t('Navigation principale','Main navigation')}><button className={tab==='search'?'active':''} onClick={()=>{setTab('search');setMessage('');}}>{t('Trouver un médicament','Find medicine')}</button><button className={tab==='pharmacy'?'active':''} onClick={()=>{setTab('pharmacy');setMessage('');}}>{t('Espace pharmacie','Pharmacy workspace')}</button>{admin&&<button className={tab==='admin'?'active':''} onClick={()=>setTab('admin')}>{t('Administration','Administration')}</button>}</nav>
  {!supabase&&<p className="notice">{t('Configuration requise : ajoutez les variables Supabase indiquées dans le guide. Aucun stock fictif n’est affiché.','Setup required: add the Supabase variables from the guide. No fictional stock is displayed.')}</p>}
  {message&&<p className="notice" role="status">{message}</p>}
- {tab==='search'&&<><section className="hero"><div className="eyebrow">{t('VOTRE SANTÉ, PLUS PROCHE','YOUR HEALTH, CLOSER')}</div><h1>{t('Votre médicament.','Your medicine.')}<br/><span>{t('La bonne pharmacie.','The right pharmacy.')}</span></h1><p>{t('Vérifiez la disponibilité avant de vous déplacer. Trouvez une pharmacie au Togo, au Bénin, au Burkina Faso et en Côte d’Ivoire.','Check availability before you travel. Find a pharmacy in Togo, Benin, Burkina Faso and Ivory Coast.')}</p>
+ {tab==='search'&&<><section className="hero"><div className="eyebrow">{t('VOTRE SANTÉ, PLUS PROCHE','YOUR HEALTH, CLOSER')}</div><h1>{t('Votre médicament.','Your medicine.')}<br/><span>{t('La bonne pharmacie.','The right pharmacy.')}</span></h1><p>
+  {t(
+    'Vérifiez la disponibilité avant de vous déplacer. Trouvez des pharmacies et des médicaments à travers l’Afrique.',
+    'Check availability before you travel. Find pharmacies and medicines across Africa.'
+  )}
+</p>
  <form className="search-form" onSubmit={search}><label>{t('Médicament','Medicine')}<input name="term" required minLength={2} maxLength={150} placeholder={t('Ex. paracétamol','E.g. paracetamol')}/></label><label>{t('Pays','Country')}<select name="country">{countryOptions}</select></label><label>{t('Ville (facultatif)','City (optional)')}<input name="city" maxLength={100} placeholder={t('Ex. Lomé','E.g. Lomé')}/></label><button disabled={busy} className="primary">{busy?t('Recherche…','Searching…'):t('Rechercher','Search')}</button></form>
- <div className="country-strip">{countries.map(([code,fr,english])=><span key={code}><i/> {en?english:fr}</span>)}</div></section>
+ <div className="country-strip">
+  {t(
+    'Ouvert aux pharmacies de toute l’Afrique',
+    'Open to pharmacies across Africa'
+  )}
+</div></section>
  <section><div className="section-heading"><h2>{searched?t('Résultats disponibles','Available results'):t('Moins de trajets. Plus de sérénité.','Less travel. More peace of mind.')}</h2>{searched&&<span>{results.length} {t('résultat(s), maximum 100','result(s), maximum 100')}</span>}</div>
  {searched ? (
   <SearchResults
@@ -394,5 +404,6 @@ async function findNearest() {
  {tab==='admin'&&admin&&session&&<section><h1 className="small-title">{t('Validation des pharmacies','Pharmacy approval')}</h1><p>{t('Vérifiez l’agrément auprès de l’autorité compétente et contactez la pharmacie avant de l’approuver.','Verify the licence with the relevant authority and contact the pharmacy before approval.')}</p>{!reviews.length&&<p className="empty">{t('Aucune pharmacie inscrite.','No registered pharmacies.')}</p>}<div className="cards">{reviews.map(p=><article className="card" key={p.id}><span className="badge">{p.approved?t('Approuvée','Approved'):t('À vérifier','Needs review')}</span><h3>{p.name}</h3><p>{p.address}, {p.city} ({p.country})</p><p>{p.phone}</p><p>{t('Agrément','Licence')}: {p.license_number}</p><button disabled={busy} className="primary" onClick={()=>void run(async()=>{const {error}=await supabase!.rpc('review_pharmacy',{target:p.id,decision:!p.approved});if(error)throw error;await loadAccount(session.user.id);})}>{p.approved?t('Suspendre','Suspend'):t('Approuver','Approve')}</button></article>)}</div></section>}
  </main><footer><a className="brand" href="/" aria-label="PharmaStock">
   <img src="/logo.png" alt="PharmaStock" style={{ width: 220, height: "auto" }} />
-</a><p>{t('Connecter les patients et les pharmacies en Afrique de l’Ouest.','Connecting patients and pharmacies across West Africa.')}</p><small>{t('Prix en FCFA (XOF). Service de recherche, sans réservation ni paiement.','Prices in FCFA (XOF). Search service, without reservations or payments.')}</small></footer></>;
+</a><p>{t('Connecter les patients et les pharmacies en Afrique de l’Ouest.','Connecting patients and pharmacies across West Africa.')}</p><small>{t('Prix affichés dans la monnaie locale de la pharmacie. Sans réservation ni paiement en ligne.',
+    'Prices shown in the pharmacy’s local currency. No online reservations or payments.')}</small></footer></>;
 }
