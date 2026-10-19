@@ -12,7 +12,24 @@ export default function Home() {
  const [en,setEn]=useState(false); const t=(fr:string,english:string)=>en?english:fr;
  const [tab,setTab]=useState('search'); const [session,setSession]=useState<Session|null>(null);
  const [admin,setAdmin]=useState(false); const [pharmacy,setPharmacy]=useState<Pharmacy|null>(null);
- const [stock,setStock]=useState<Stock[]>([]); const [reviews,setReviews]=useState<Pharmacy[]>([]);
+ const [stock,setStock]=useState<Stock[]>([]); 
+ const [inventorySearch, setInventorySearch] = useState('');
+
+const inventoryQuery = inventorySearch
+  .trim()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+const visibleStock = stock.filter(item => {
+  const name = `${item.medicine} ${item.dosage}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  return name.includes(inventoryQuery);
+});
+ const [reviews,setReviews]=useState<Pharmacy[]>([]);
  const [results,setResults]=useState<Result[]>([]); const [searched,setSearched]=useState(false);
  const [busy,setBusy]=useState(false); const [message,setMessage]=useState('');
  const [authMode,setAuthMode]=useState('login');
@@ -74,7 +91,43 @@ export default function Home() {
  {tab==='reset'&&<section className="panel narrow"><h2>{t('Réinitialiser le mot de passe','Reset password')}</h2><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{if(!supabase)throw Error('Supabase configuration required');const {error}=await supabase.auth.resetPasswordForEmail(String(f.get('email')),{redirectTo:window.location.origin+'/?recovery=1'});if(error)throw error;setMessage(t('Consultez votre e-mail pour continuer.','Check your email to continue.'));});}}><label>E-mail<input name="email" type="email" required/></label><button className="primary" disabled={busy}>{t('Envoyer le lien','Send link')}</button></form></section>}
  {session&&<details className="account"><summary>{t('Mon compte : modifier le mot de passe','My account: change password')}</summary><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{const {error}=await supabase!.auth.updateUser({password:String(f.get('password'))});if(error)throw error;setMessage(t('Mot de passe modifié.','Password updated.'));});}}><label>{t('Nouveau mot de passe','New password')}<input type="password" name="password" minLength={8} autoComplete="new-password" required/></label><button className="primary" disabled={busy}>{t('Enregistrer','Save')}</button></form></details>}
  {tab==='pharmacy'&&session&&<section><div className="section-heading"><h1 className="small-title">{t('Mon espace pharmacie','My pharmacy workspace')}</h1><span className="badge">{pharmacy?.approved?t('Approuvée','Approved'):t('En attente de validation','Pending approval')}</span></div><details open={!pharmacy} className="panel"><summary>{t('Profil de la pharmacie','Pharmacy profile')}</summary><form key={pharmacy?.id||'new'} onSubmit={savePharmacy} className="form-grid two"><label>{t('Nom de la pharmacie','Pharmacy name')}<input name="name" defaultValue={pharmacy?.name} minLength={2} maxLength={150} required/></label><label>{t('Pays','Country')}<select name="country" defaultValue={pharmacy?.country||'TG'}>{countryOptions}</select></label><label>{t('Ville','City')}<input name="city" defaultValue={pharmacy?.city} minLength={2} maxLength={100} required/></label><label>{t('Adresse complète','Full address')}<input name="address" defaultValue={pharmacy?.address} minLength={3} maxLength={300} required/></label><label>{t('Téléphone international','International phone')}<input name="phone" type="tel" placeholder="+22890123456" pattern="\+[0-9]{8,15}" defaultValue={pharmacy?.phone} required/></label><label>{t('Numéro d’agrément professionnel','Professional licence number')}<input name="license_number" defaultValue={pharmacy?.license_number} minLength={2} maxLength={100} required/></label><button disabled={busy} className="primary">{t('Enregistrer le profil','Save profile')}</button></form></details>
- {pharmacy&&<><div className="panel"><h2>{t('Ajouter ou remplacer un stock','Add or replace stock')}</h2><p>{t('Le même nom et dosage remplacent le stock existant. Les quantités à zéro sont masquées dans la recherche.','The same name and dosage replace existing stock. Zero quantities are hidden from search.')}</p><form onSubmit={addStock} className="form-grid two"><label>{t('Médicament','Medicine')}<input name="medicine" minLength={2} maxLength={150} required/></label><label>{t('Dosage et présentation','Dosage and pack')}<input name="dosage" placeholder="500 mg · 16 comprimés" maxLength={100} required/></label><label>{t('Quantité disponible','Available quantity')}<input name="quantity" type="number" min={0} max={2147483647} step={1} required/></label><label>{t('Prix par boîte en FCFA (facultatif)','Price per pack in FCFA (optional)')}<input name="price" type="number" min={0} max={2147483647} step={1}/></label><button disabled={busy} className="primary">{t('Enregistrer le stock','Save stock')}</button></form></div><h2>{t('Mon inventaire','My inventory')}</h2>{!stock.length&&<p className="empty">{t('Votre inventaire est vide. Ajoutez votre premier médicament.','Your inventory is empty. Add your first medicine.')}</p>}<div className="cards">{stock.map(s=><article className="card" key={s.id}><h3>{s.medicine}</h3><p>{s.dosage}</p><StockQuantity
+ {pharmacy&&<><div className="panel"><h2>{t('Ajouter ou remplacer un stock','Add or replace stock')}</h2><p>{t('Le même nom et dosage remplacent le stock existant. Les quantités à zéro sont masquées dans la recherche.','The same name and dosage replace existing stock. Zero quantities are hidden from search.')}</p><form onSubmit={addStock} className="form-grid two"><label>{t('Médicament','Medicine')}<input name="medicine" minLength={2} maxLength={150} required/></label><label>{t('Dosage et présentation','Dosage and pack')}<input name="dosage" placeholder="500 mg · 16 comprimés" maxLength={100} required/></label><label>{t('Quantité disponible','Available quantity')}<input name="quantity" type="number" min={0} max={2147483647} step={1} required/></label><label>{t('Prix par boîte en FCFA (facultatif)','Price per pack in FCFA (optional)')}<input name="price" type="number" min={0} max={2147483647} step={1}/></label><button disabled={busy} className="primary">{t('Enregistrer le stock','Save stock')}</button></form></div><h2>{t('Mon inventaire','My inventory')}</h2><div className="panel">
+  <label htmlFor="inventory-search">
+    {t('Rechercher dans mon stock', 'Search my inventory')}
+  </label>
+
+  <input
+    id="inventory-search"
+    type="search"
+    value={inventorySearch}
+    onChange={event => setInventorySearch(event.target.value)}
+    placeholder={t(
+      'Nom du médicament ou dosage…',
+      'Medicine name or dosage…'
+    )}
+    style={{ marginTop: 10 }}
+  />
+
+  <p role="status">
+    {visibleStock.length} / {stock.length}{' '}
+    {t('produits affichés', 'products shown')}
+  </p>
+
+  {inventorySearch && (
+    <button type="button" onClick={() => setInventorySearch('')}>
+      {t('Effacer la recherche', 'Clear search')}
+    </button>
+  )}
+
+  {stock.length > 0 && visibleStock.length === 0 && (
+    <p>
+      {t(
+        'Aucun médicament ne correspond à votre recherche.',
+        'No medicine matches your search.'
+      )}
+    </p>
+  )}
+</div>{!stock.length&&<p className="empty">{t('Votre inventaire est vide. Ajoutez votre premier médicament.','Your inventory is empty. Add your first medicine.')}</p>}<div className="cards">{visibleStock.map(s=><article className="card" key={s.id}><h3>{s.medicine}</h3><p>{s.dosage}</p><StockQuantity
   id={s.id}
   medicine={s.medicine}
   quantity={s.quantity}
