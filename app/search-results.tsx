@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
+import { currencyForCountry } from '@/lib/countries';
 
 export type PatientPosition = {
   lat: number;
@@ -308,11 +309,12 @@ export default function SearchResults({
             </h3>
 
             <p className="price">
-              {result.price === null
-                ? t('Prix à confirmer', 'Confirm price')
-                : `${result.price.toLocaleString(en ? 'en' : 'fr')} FCFA`}
-            </p>
-
+  {result.price === null
+    ? t('Prix à confirmer', 'Confirm price')
+    : `${result.price.toLocaleString(
+        en ? 'en' : 'fr'
+      )} ${currencyForCountry(result.country)}`}
+</p>
             <strong>{result.pharmacy}</strong>
             <p>{result.address}, {result.city}</p>
 
