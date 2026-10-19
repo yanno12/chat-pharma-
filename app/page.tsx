@@ -186,18 +186,22 @@ async function findNearest() {
  <form className="search-form" onSubmit={search}><label>{t('Médicament','Medicine')}<input name="term" required minLength={2} maxLength={150} placeholder={t('Ex. paracétamol','E.g. paracetamol')}/></label><label>{t('Pays','Country')}<select name="country">{countryOptions}</select></label><label>{t('Ville (facultatif)','City (optional)')}<input name="city" maxLength={100} placeholder={t('Ex. Lomé','E.g. Lomé')}/></label><button disabled={busy} className="primary">{busy?t('Recherche…','Searching…'):t('Rechercher','Search')}</button></form>
  <div className="country-strip">{countries.map(([code,fr,english])=><span key={code}><i/> {en?english:fr}</span>)}</div></section>
  <section><div className="section-heading"><h2>{searched?t('Résultats disponibles','Available results'):t('Moins de trajets. Plus de sérénité.','Less travel. More peace of mind.')}</h2>{searched&&<span>{results.length} {t('résultat(s), maximum 100','result(s), maximum 100')}</span>}</div>
- {searched?(results.length?<div className="cards">{results.map(r=><article className="card" key={r.stock_id}><span className="badge">{t('En stock déclaré','Reported in stock')}</span><h3>{r.medicine} <small>{r.dosage}</small></h3><p className="price">{r.price===null?t('Prix à confirmer','Confirm price'):`${r.price.toLocaleString(en?'en':'fr')} FCFA`}</p><strong>{r.pharmacy}</strong><p>{r.address}, {r.city}</p><p className="muted">{t('Mis à jour','Updated')}: {new Date(r.updated_at).toLocaleString(en?'en-GB':'fr-FR')}</p><a className="contact" href={`tel:${r.phone}`}>{t('Appeler','Call')} {r.phone}</a>{r.latitude != null && r.longitude != null && (
-  <a
-    className="contact"
-    href={`https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{ display: 'block', marginTop: 12 }}
-  >
-    {t('Obtenir un itinéraire', 'Get directions')}
-  </a>
-)}</article>)}</div>:<p className="empty">{t('Aucun stock trouvé. Essayez une autre ville ou une autre orthographe. Les pharmacies participantes ajoutent leurs stocks progressivement.','No stock found. Try another city or spelling. Participating pharmacies are gradually adding their stock.')}</p>):<div className="cards"><article className="card"><span className="step">01</span><h3>{t('Recherchez simplement','Search easily')}</h3><p>{t('Indiquez le nom du médicament et votre localisation. Aucun compte patient nécessaire.','Enter the medicine name and your location. No patient account needed.')}</p></article><article className="card"><span className="step">02</span><h3>{t('Comparez les disponibilités','Compare availability')}</h3><p>{t('Consultez les stocks déclarés, les prix en FCFA et les coordonnées des pharmacies approuvées.','View reported stock, prices in FCFA and contact details for approved pharmacies.')}</p></article><article className="card"><span className="step">03</span><h3>{t('Appelez avant de partir','Call before you travel')}</h3><p>{t('Confirmez le stock et les conditions de délivrance directement avec la pharmacie.','Confirm stock and dispensing requirements directly with the pharmacy.')}</p></article></div>}
- <p className="disclaimer">{t('La disponibilité est déclarée par les pharmacies et peut changer. Aucun conseil médical, diagnostic ou vente en ligne. Respectez les prescriptions et demandez conseil à un professionnel de santé.','Availability is reported by pharmacies and may change. No medical advice, diagnosis or online sales. Follow prescriptions and consult a healthcare professional.')}</p></section></>}
+ {searched ? (
+  <SearchResults
+    results={results}
+    en={en}
+    patientPosition={patientPosition}
+    busy={busy}
+    onLocate={() => void findNearest()}
+  />
+) : (
+  <p>
+    {t(
+      'Recherchez un médicament pour voir les pharmacies.',
+      'Search for a medicine to see pharmacies.'
+    )}
+  </p>
+)} <p className="disclaimer">{t('La disponibilité est déclarée par les pharmacies et peut changer. Aucun conseil médical, diagnostic ou vente en ligne. Respectez les prescriptions et demandez conseil à un professionnel de santé.','Availability is reported by pharmacies and may change. No medical advice, diagnosis or online sales. Follow prescriptions and consult a healthcare professional.')}</p></section></>}
  {tab==='pharmacy'&&!session&&<section className="panel narrow"><div className="eyebrow">{t('POUR LES PROFESSIONNELS','FOR PROFESSIONALS')}</div><h1 className="small-title">{t('Votre pharmacie, visible.','Make your pharmacy visible.')}</h1><p>{t('Gérez votre stock et aidez les patients à vous trouver.','Manage your stock and help patients find you.')}</p><div className="switch"><button onClick={()=>setAuthMode('login')} className={authMode==='login'?'active':''}>{t('Connexion','Sign in')}</button><button onClick={()=>setAuthMode('signup')} className={authMode==='signup'?'active':''}>{t('Créer un compte','Create account')}</button></div><form onSubmit={authenticate} className="form-grid"><label>E-mail<input name="email" type="email" autoComplete="email" required/></label><label>{t('Mot de passe','Password')}<input name="password" type="password" minLength={8} autoComplete={authMode==='signup'?'new-password':'current-password'} required/></label><button disabled={busy} className="primary">{busy?'…':authMode==='signup'?t('Créer mon compte','Create my account'):t('Se connecter','Sign in')}</button></form><button className="text-button" disabled={busy} onClick={()=>setTab('reset')}>{t('Mot de passe oublié ?','Forgot password?')}</button></section>}
  {tab==='reset'&&<section className="panel narrow"><h2>{t('Réinitialiser le mot de passe','Reset password')}</h2><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{if(!supabase)throw Error('Supabase configuration required');const {error}=await supabase.auth.resetPasswordForEmail(String(f.get('email')),{redirectTo:window.location.origin+'/?recovery=1'});if(error)throw error;setMessage(t('Consultez votre e-mail pour continuer.','Check your email to continue.'));});}}><label>E-mail<input name="email" type="email" required/></label><button className="primary" disabled={busy}>{t('Envoyer le lien','Send link')}</button></form></section>}
  {session&&<details className="account"><summary>{t('Mon compte : modifier le mot de passe','My account: change password')}</summary><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{const {error}=await supabase!.auth.updateUser({password:String(f.get('password'))});if(error)throw error;setMessage(t('Mot de passe modifié.','Password updated.'));});}}><label>{t('Nouveau mot de passe','New password')}<input type="password" name="password" minLength={8} autoComplete="new-password" required/></label><button className="primary" disabled={busy}>{t('Enregistrer','Save')}</button></form></details>}
