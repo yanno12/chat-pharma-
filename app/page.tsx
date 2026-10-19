@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import PharmacyLocation from './pharmacy-location';
+import { countries, currencyForCountry } from '@/lib/countries';
 import SearchResults, {
   type PatientPosition,
   type PharmacySearchResult,
@@ -12,7 +13,7 @@ import SearchResults, {
 type Pharmacy = {id:string;name:string;country:string;city:string;address:string;phone:string;license_number:string;approved:boolean};
 type Stock = {id:string;medicine:string;dosage:string;quantity:number;price:number|null;updated_at:string};
 type Result = PharmacySearchResult;
-const countries = [['TG','Togo','Togo'],['BJ','Bénin','Benin'],['BF','Burkina Faso','Burkina Faso'],['CI','Côte d’Ivoire','Ivory Coast']];
+
 export default function Home() {
  const [en,setEn]=useState(false); const [patientPosition, setPatientPosition] =
   useState<PatientPosition | null>(null);
@@ -319,7 +320,21 @@ async function findNearest() {
       )
     }
   />
-)}{pharmacy&&<><div className="panel"><h2>{t('Ajouter ou remplacer un stock','Add or replace stock')}</h2><p>{t('Le même nom et dosage remplacent le stock existant. Les quantités à zéro sont masquées dans la recherche.','The same name and dosage replace existing stock. Zero quantities are hidden from search.')}</p><form onSubmit={addStock} className="form-grid two"><label>{t('Médicament','Medicine')}<input name="medicine" minLength={2} maxLength={150} required/></label><label>{t('Dosage et présentation','Dosage and pack')}<input name="dosage" placeholder="500 mg · 16 comprimés" maxLength={100} required/></label><label>{t('Quantité disponible','Available quantity')}<input name="quantity" type="number" min={0} max={2147483647} step={1} required/></label><label>{t('Prix par boîte en FCFA (facultatif)','Price per pack in FCFA (optional)')}<input name="price" type="number" min={0} max={2147483647} step={1}/></label><button disabled={busy} className="primary">{t('Enregistrer le stock','Save stock')}</button></form></div><h2>{t('Mon inventaire','My inventory')}</h2><div className="panel">
+)}{pharmacy&&<><div className="panel"><h2>{t('Ajouter ou remplacer un stock','Add or replace stock')}</h2><p>{t('Le même nom et dosage remplacent le stock existant. Les quantités à zéro sont masquées dans la recherche.','The same name and dosage replace existing stock. Zero quantities are hidden from search.')}</p><form onSubmit={addStock} className="form-grid two"><label>{t('Médicament','Medicine')}<input name="medicine" minLength={2} maxLength={150} required/></label><label>{t('Dosage et présentation','Dosage and pack')}<input name="dosage" placeholder="500 mg · 16 comprimés" maxLength={100} required/></label><label>{t('Quantité disponible','Available quantity')}<input name="quantity" type="number" min={0} max={2147483647} step={1} required/></label><label>
+  {t(
+    'Prix par boîte, facultatif',
+    'Price per pack, optional'
+  )}{' '}
+  — {currencyForCountry(pharmacy?.country ?? 'TG')}
+
+  <input
+    name="price"
+    type="number"
+    min={0}
+    max={2147483647}
+    step={1}
+  />
+</label><button disabled={busy} className="primary">{t('Enregistrer le stock','Save stock')}</button></form></div><h2>{t('Mon inventaire','My inventory')}</h2><div className="panel">
   <label htmlFor="inventory-search">
     {t('Rechercher dans mon stock', 'Search my inventory')}
   </label>
@@ -371,7 +386,9 @@ async function findNearest() {
   }
 />
 <p>
-  {t('Prix', 'Price')}: {s.price === null ? '—' : `${s.price} FCFA`}
+  {t('Prix', 'Price')}: {s.price === null
+  ? '—'
+  : `${s.price} ${currencyForCountry(pharmacy?.country ?? 'TG')}`}
 </p><p className="muted">{new Date(s.updated_at).toLocaleString(en?'en-GB':'fr-FR')}</p><div className="row"><button disabled={busy} onClick={()=>void run(async()=>{const {error}=await supabase!.from('inventory').update({quantity:0}).eq('id',s.id);if(error)throw error;await loadAccount(session.user.id);})}>{t('Marquer épuisé','Mark out of stock')}</button><button disabled={busy} onClick={()=>{if(window.confirm(t('Supprimer ce stock ?','Delete this stock?')))void run(async()=>{const {error}=await supabase!.from('inventory').delete().eq('id',s.id);if(error)throw error;await loadAccount(session.user.id);});}}>{t('Supprimer','Delete')}</button></div></article>)}</div></>}
  </section>}
  {tab==='admin'&&admin&&session&&<section><h1 className="small-title">{t('Validation des pharmacies','Pharmacy approval')}</h1><p>{t('Vérifiez l’agrément auprès de l’autorité compétente et contactez la pharmacie avant de l’approuver.','Verify the licence with the relevant authority and contact the pharmacy before approval.')}</p>{!reviews.length&&<p className="empty">{t('Aucune pharmacie inscrite.','No registered pharmacies.')}</p>}<div className="cards">{reviews.map(p=><article className="card" key={p.id}><span className="badge">{p.approved?t('Approuvée','Approved'):t('À vérifier','Needs review')}</span><h3>{p.name}</h3><p>{p.address}, {p.city} ({p.country})</p><p>{p.phone}</p><p>{t('Agrément','Licence')}: {p.license_number}</p><button disabled={busy} className="primary" onClick={()=>void run(async()=>{const {error}=await supabase!.rpc('review_pharmacy',{target:p.id,decision:!p.approved});if(error)throw error;await loadAccount(session.user.id);})}>{p.approved?t('Suspendre','Suspend'):t('Approuver','Approve')}</button></article>)}</div></section>}
