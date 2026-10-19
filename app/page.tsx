@@ -160,6 +160,14 @@ async function findNearest() {
   });
 }
  async function authenticate(e:FormEvent<HTMLFormElement>){const f=values(e);await run(async()=>{
+   if (authMode === 'signup' && f.get('acceptTerms') !== 'yes') {
+  throw new Error(
+    t(
+      'Veuillez accepter les conditions d’utilisation pour créer votre compte.',
+      'Please accept the terms of use to create your account.'
+    )
+  );
+}
   if(!supabase)throw Error(t('Supabase n’est pas encore configuré.','Supabase is not configured yet.'));
   const credentials={email:String(f.get('email')),password:String(f.get('password'))};
   const {error}=authMode==='signup'?await supabase.auth.signUp({...credentials,options:{emailRedirectTo:window.location.origin}}):await supabase.auth.signInWithPassword(credentials);
@@ -202,7 +210,102 @@ async function findNearest() {
     )}
   </p>
 )} <p className="disclaimer">{t('La disponibilité est déclarée par les pharmacies et peut changer. Aucun conseil médical, diagnostic ou vente en ligne. Respectez les prescriptions et demandez conseil à un professionnel de santé.','Availability is reported by pharmacies and may change. No medical advice, diagnosis or online sales. Follow prescriptions and consult a healthcare professional.')}</p></section></>}
- {tab==='pharmacy'&&!session&&<section className="panel narrow"><div className="eyebrow">{t('POUR LES PROFESSIONNELS','FOR PROFESSIONALS')}</div><h1 className="small-title">{t('Votre pharmacie, visible.','Make your pharmacy visible.')}</h1><p>{t('Gérez votre stock et aidez les patients à vous trouver.','Manage your stock and help patients find you.')}</p><div className="switch"><button onClick={()=>setAuthMode('login')} className={authMode==='login'?'active':''}>{t('Connexion','Sign in')}</button><button onClick={()=>setAuthMode('signup')} className={authMode==='signup'?'active':''}>{t('Créer un compte','Create account')}</button></div><form onSubmit={authenticate} className="form-grid"><label>E-mail<input name="email" type="email" autoComplete="email" required/></label><label>{t('Mot de passe','Password')}<input name="password" type="password" minLength={8} autoComplete={authMode==='signup'?'new-password':'current-password'} required/></label><button disabled={busy} className="primary">{busy?'…':authMode==='signup'?t('Créer mon compte','Create my account'):t('Se connecter','Sign in')}</button></form><button className="text-button" disabled={busy} onClick={()=>setTab('reset')}>{t('Mot de passe oublié ?','Forgot password?')}</button></section>}
+ {tab==='pharmacy'&&!session&&<section className="panel narrow"><div className="eyebrow">{t('POUR LES PROFESSIONNELS','FOR PROFESSIONALS')}</div><h1 className="small-title">{t('Votre pharmacie, visible.','Make your pharmacy visible.')}</h1><p>{t('Gérez votre stock et aidez les patients à vous trouver.','Manage your stock and help patients find you.')}</p><div className="switch"><button onClick={()=>setAuthMode('login')} className={authMode==='login'?'active':''}>{t('Connexion','Sign in')}</button><button onClick={()=>setAuthMode('signup')} className={authMode==='signup'?'active':''}>{t('Créer un compte','Create account')}</button></div><form onSubmit={authenticate} className="form-grid"><label>E-mail<input name="email" type="email" autoComplete="email" required/></label><label>{t('Mot de passe','Password')}<input name="password" type="password" minLength={8} autoComplete={authMode==='signup'?'new-password':'current-password'} required/></label>{authMode === 'signup' && (
+  <div>
+    <details style={{ marginBottom: 16 }}>
+      <summary>
+        {t(
+          'Lire les conditions d’utilisation',
+          'Read the terms of use'
+        )}
+      </summary>
+
+      <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+        <p>
+          {t(
+            'PharmaStock permet aux pharmacies de publier leurs disponibilités et aux patients de rechercher des médicaments.',
+            'PharmaStock allows pharmacies to publish availability and patients to search for medicines.'
+          )}
+        </p>
+
+        <ul>
+          <li>
+            {t(
+              'Vous devez être autorisé à représenter la pharmacie et fournir des informations professionnelles exactes.',
+              'You must be authorised to represent the pharmacy and provide accurate professional information.'
+            )}
+          </li>
+
+          <li>
+            {t(
+              'Vous êtes responsable de la mise à jour des stocks, prix, coordonnées et informations publiées.',
+              'You are responsible for keeping stock, prices, contact details and published information up to date.'
+            )}
+          </li>
+
+          <li>
+            {t(
+              'Votre profil professionnel, vos stocks et votre localisation enregistrée peuvent être visibles publiquement après validation.',
+              'Your business profile, inventory and saved pharmacy location may be publicly visible after approval.'
+            )}
+          </li>
+
+          <li>
+            {t(
+              'Les disponibilités sont indicatives et doivent être confirmées auprès de la pharmacie avant déplacement.',
+              'Availability is indicative and should be confirmed with the pharmacy before travelling.'
+            )}
+          </li>
+
+          <li>
+            {t(
+              'PharmaStock ne fournit ni diagnostic, ni prescription, ni vente de médicaments en ligne.',
+              'PharmaStock does not provide diagnoses, prescriptions or online medicine sales.'
+            )}
+          </li>
+
+          <li>
+            {t(
+              'Les annonces trompeuses, les activités illégales et les usages abusifs peuvent entraîner la suspension du compte.',
+              'Misleading listings, illegal activities and misuse may result in account suspension.'
+            )}
+          </li>
+        </ul>
+      </div>
+    </details>
+
+    <label
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        lineHeight: 1.5,
+      }}
+    >
+      <input
+        type="checkbox"
+        name="acceptTerms"
+        value="yes"
+        required
+        style={{
+          width: 20,
+          height: 20,
+          minHeight: 20,
+          marginTop: 2,
+          flexShrink: 0,
+        }}
+      />
+
+      <span>
+        {t(
+          'J’ai lu et j’accepte les conditions d’utilisation.',
+          'I have read and accept the terms of use.'
+        )}
+      </span>
+    </label>
+  </div>
+)}<button disabled={busy} className="primary">{busy?'…':authMode==='signup'?t('Créer mon compte','Create my account'):t('Se connecter','Sign in')}</button></form><button className="text-button" disabled={busy} onClick={()=>setTab('reset')}>{t('Mot de passe oublié ?','Forgot password?')}</button></section>}
  {tab==='reset'&&<section className="panel narrow"><h2>{t('Réinitialiser le mot de passe','Reset password')}</h2><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{if(!supabase)throw Error('Supabase configuration required');const {error}=await supabase.auth.resetPasswordForEmail(String(f.get('email')),{redirectTo:window.location.origin+'/?recovery=1'});if(error)throw error;setMessage(t('Consultez votre e-mail pour continuer.','Check your email to continue.'));});}}><label>E-mail<input name="email" type="email" required/></label><button className="primary" disabled={busy}>{t('Envoyer le lien','Send link')}</button></form></section>}
  {session&&<details className="account"><summary>{t('Mon compte : modifier le mot de passe','My account: change password')}</summary><form className="form-grid" onSubmit={e=>{const f=values(e);void run(async()=>{const {error}=await supabase!.auth.updateUser({password:String(f.get('password'))});if(error)throw error;setMessage(t('Mot de passe modifié.','Password updated.'));});}}><label>{t('Nouveau mot de passe','New password')}<input type="password" name="password" minLength={8} autoComplete="new-password" required/></label><button className="primary" disabled={busy}>{t('Enregistrer','Save')}</button></form></details>}
  {tab==='pharmacy'&&session&&<section><div className="section-heading"><h1 className="small-title">{t('Mon espace pharmacie','My pharmacy workspace')}</h1><span className="badge">{pharmacy?.approved?t('Approuvée','Approved'):t('En attente de validation','Pending approval')}</span></div><details open={!pharmacy} className="panel"><summary>{t('Profil de la pharmacie','Pharmacy profile')}</summary><form key={pharmacy?.id||'new'} onSubmit={savePharmacy} className="form-grid two"><label>{t('Nom de la pharmacie','Pharmacy name')}<input name="name" defaultValue={pharmacy?.name} minLength={2} maxLength={150} required/></label><label>{t('Pays','Country')}<select name="country" defaultValue={pharmacy?.country||'TG'}>{countryOptions}</select></label><label>{t('Ville','City')}<input name="city" defaultValue={pharmacy?.city} minLength={2} maxLength={100} required/></label><label>{t('Adresse complète','Full address')}<input name="address" defaultValue={pharmacy?.address} minLength={3} maxLength={300} required/></label><label>{t('Téléphone international','International phone')}<input name="phone" type="tel" placeholder="+22890123456" pattern="\+[0-9]{8,15}" defaultValue={pharmacy?.phone} required/></label><label>{t('Numéro d’agrément professionnel','Professional licence number')}<input name="license_number" defaultValue={pharmacy?.license_number} minLength={2} maxLength={100} required/></label><button disabled={busy} className="primary">{t('Enregistrer le profil','Save profile')}</button></form></details>
