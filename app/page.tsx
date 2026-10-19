@@ -4,22 +4,24 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import PharmacyLocation from './pharmacy-location';
+import SearchResults, {
+  type PatientPosition,
+  type PharmacySearchResult,
+} from './search-results';
 
 type Pharmacy = {id:string;name:string;country:string;city:string;address:string;phone:string;license_number:string;approved:boolean};
 type Stock = {id:string;medicine:string;dosage:string;quantity:number;price:number|null;updated_at:string};
-type Result = Omit<Stock, 'quantity' | 'id'> & {
-  stock_id: string;
-  pharmacy: string;
-  country: string;
-  city: string;
-  address: string;
-  phone: string;
-  latitude: number | null;
-  longitude: number | null;
-};
+type Result = PharmacySearchResult;
 const countries = [['TG','Togo','Togo'],['BJ','Bénin','Benin'],['BF','Burkina Faso','Burkina Faso'],['CI','Côte d’Ivoire','Ivory Coast']];
 export default function Home() {
- const [en,setEn]=useState(false); const t=(fr:string,english:string)=>en?english:fr;
+ const [en,setEn]=useState(false); const [patientPosition, setPatientPosition] =
+  useState<PatientPosition | null>(null);
+
+const [lastSearch, setLastSearch] = useState<{
+  term: string;
+  country_code: string;
+  city_query: string;
+} | null>(null); const t=(fr:string,english:string)=>en?english:fr;
  const [tab,setTab]=useState('search'); const [session,setSession]=useState<Session|null>(null);
  const [admin,setAdmin]=useState(false); const [pharmacy,setPharmacy]=useState<Pharmacy|null>(null);
  const [stock,setStock]=useState<Stock[]>([]); 
@@ -64,10 +66,99 @@ const visibleStock = stock.filter(item => {
  async function run(action:()=>Promise<void>){setBusy(true);setMessage('');try{await action();}catch(e){setMessage(e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e));}finally{setBusy(false);}}
  function values(e:FormEvent<HTMLFormElement>){e.preventDefault();return new FormData(e.currentTarget);}
  const countryOptions=countries.map(([code,fr,english])=><option key={code} value={code}>{en?english:fr}</option>);
- async function search(e:FormEvent<HTMLFormElement>){const f=values(e);await run(async()=>{
-  if(!supabase)throw Error(t('Connectez Supabase pour rechercher les stocks réels.','Connect Supabase to search live inventory.'));
-  const {data,error}=await supabase.rpc('search_medicines_with_location',{term:f.get('term'),country_code:f.get('country'),city_query:f.get('city')});if(error)throw error;setResults(data);setSearched(true);
- });}
+ async function search(e: FormEvent<HTMLFormElement>) {
+  const f = values(e);
+
+  const query = {
+    term: String(f.get('term') ?? '').trim(),
+    country_code: String(f.get('country') ?? ''),
+    city_query: String(f.get('city') ?? '').trim(),
+  };
+
+  await run(async () => {
+    if (!supabase) {
+      throw new Error(
+        t('Supabase n’est pas configuré.', 'Supabase is not configured.')
+      );
+    }
+
+    const { data, error } = await supabase.rpc(
+      'search_medicines_nearby',
+      {
+        ...query,
+        patient_lat: patientPosition?.lat ?? null,
+        patient_lng: patientPosition?.lng ?? null,
+      }
+    );
+
+    if (error) throw error;
+
+    setResults(data ?? []);
+    setLastSearch(query);
+    setSearched(true);
+  });
+}
+
+async function findNearest() {
+  if (!lastSearch || busy) return;
+
+  const query = lastSearch;
+
+  await run(async () => {
+    if (!supabase) {
+      throw new Error(
+        t('Supabase n’est pas configuré.', 'Supabase is not configured.')
+      );
+    }
+
+    if (!navigator.geolocation) {
+      throw new Error(
+        t(
+          'Votre navigateur ne permet pas la géolocalisation.',
+          'Your browser does not support geolocation.'
+        )
+      );
+    }
+
+    const position = await new Promise<GeolocationPosition>(
+      (resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          () => reject(new Error(
+            t(
+              'Localisation indisponible. Autorisez la localisation dans votre navigateur ou continuez la recherche par ville.',
+              'Location unavailable. Allow location access in your browser or continue searching by city.'
+            )
+          )),
+          {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0,
+          }
+        );
+      }
+    );
+
+    const location = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    };
+
+    const { data, error } = await supabase.rpc(
+      'search_medicines_nearby',
+      {
+        ...query,
+        patient_lat: location.lat,
+        patient_lng: location.lng,
+      }
+    );
+
+    if (error) throw error;
+
+    setResults(data ?? []);
+    setPatientPosition(location);
+  });
+}
  async function authenticate(e:FormEvent<HTMLFormElement>){const f=values(e);await run(async()=>{
   if(!supabase)throw Error(t('Supabase n’est pas encore configuré.','Supabase is not configured yet.'));
   const credentials={email:String(f.get('email')),password:String(f.get('password'))};
