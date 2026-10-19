@@ -19,14 +19,35 @@ export default function StockQuantity({
   onChanged,
 }: Props) {
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
   const [message, setMessage] = useState('');
+
   const locked = useRef(false);
+  const editBase = useRef(quantity);
 
   const t = (fr: string, english: string) => en ? english : fr;
 
-  async function adjust(delta: number) {
-    const next = quantity + delta;
-    if (locked.current || next < 0 || next > 2147483647) return;
+  function startEditing() {
+    if (locked.current) return;
+    editBase.current = quantity;
+    setDraft(String(quantity));
+    setMessage('');
+    setEditing(true);
+  }
+
+  async function saveQuantity(next: number, expected: number) {
+    if (locked.current) return;
+
+    if (!Number.isInteger(next) || next < 0 || next > 2147483647) {
+      setMessage(
+        t(
+          'Saisissez un nombre entier entre 0 et 2147483647.',
+          'Enter a whole number between 0 and 2147483647.'
+        )
+      );
+      return;
+    }
 
     locked.current = true;
     setSaving(true);
@@ -43,7 +64,7 @@ export default function StockQuantity({
         .from('inventory')
         .update({ quantity: next })
         .eq('id', id)
-        .eq('quantity', quantity)
+        .eq('quantity', expected)
         .select('quantity,updated_at')
         .maybeSingle();
 
@@ -68,6 +89,7 @@ export default function StockQuantity({
         }
 
         onChanged(latest.data.quantity, latest.data.updated_at);
+        setEditing(false);
         setMessage(
           t(
             'Le stock a changé ailleurs. Quantité actualisée ; réessayez.',
@@ -78,6 +100,7 @@ export default function StockQuantity({
       }
 
       onChanged(data.quantity, data.updated_at);
+      setEditing(false);
       setMessage(t('Quantité enregistrée.', 'Quantity saved.'));
     } catch (error) {
       setMessage(
@@ -89,6 +112,22 @@ export default function StockQuantity({
       locked.current = false;
       setSaving(false);
     }
+  }
+
+  function saveDraft() {
+    const value = draft.trim();
+
+    if (!/^\d+$/.test(value)) {
+      setMessage(
+        t(
+          'Saisissez un nombre entier positif ou zéro.',
+          'Enter a positive whole number or zero.'
+        )
+      );
+      return;
+    }
+
+    void saveQuantity(Number(value), editBase.current);
   }
 
   return (
@@ -106,42 +145,109 @@ export default function StockQuantity({
           gap: 8,
         }}
       >
-        {[-10, -1].map(delta => (
-          <button
-            key={delta}
-            type="button"
-            disabled={saving || quantity + delta < 0}
-            aria-label={`${t('Diminuer de', 'Decrease by')} ${-delta}`}
-            onClick={() => void adjust(delta)}
-          >
-            {delta === -1 ? '−' : '−10'}
-          </button>
-        ))}
-
-        <output
-          aria-label={t('Quantité actuelle', 'Current quantity')}
-          style={{
-            minWidth: 36,
-            textAlign: 'center',
-            fontSize: 20,
-            fontWeight: 700,
-          }}
+        <button
+          type="button"
+          disabled={saving || editing || quantity === 0}
+          aria-label={t('Diminuer de 1', 'Decrease by 1')}
+          onClick={() => void saveQuantity(quantity - 1, quantity)}
         >
-          {quantity}
-        </output>
+          −
+        </button>
 
-        {[1, 10].map(delta => (
+        {editing ? (
+          <input
+            autoFocus
+            type="number"
+            min={0}
+            max={2147483647}
+            step={1}
+            inputMode="numeric"
+            value={draft}
+            disabled={saving}
+            aria-label={t('Nouvelle quantité', 'New quantity')}
+            onChange={event => setDraft(event.target.value)}
+            onFocus={event => event.currentTarget.select()}
+            onKeyDown={event => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                saveDraft();
+              }
+
+              if (event.key === 'Escape' && !saving) {
+                setEditing(false);
+                setMessage('');
+              }
+            }}
+            style={{
+              width: 110,
+              textAlign: 'center',
+              fontSize: 20,
+              fontWeight: 700,
+            }}
+          />
+        ) : (
           <button
-            key={delta}
             type="button"
-            disabled={saving || quantity + delta > 2147483647}
-            aria-label={`${t('Augmenter de', 'Increase by')} ${delta}`}
-            onClick={() => void adjust(delta)}
+            disabled={saving}
+            onClick={startEditing}
+            aria-label={`${t(
+              'Modifier la quantité',
+              'Edit quantity'
+            )}: ${quantity}`}
+            title={t('Cliquer pour modifier', 'Click to edit')}
+            style={{
+              minWidth: 64,
+              fontSize: 20,
+              fontWeight: 700,
+              borderStyle: 'dashed',
+            }}
           >
-            {delta === 1 ? '+' : '+10'}
+            {quantity}
           </button>
-        ))}
+        )}
+
+        <button
+          type="button"
+          disabled={saving || editing || quantity >= 2147483647}
+          aria-label={t('Augmenter de 1', 'Increase by 1')}
+          onClick={() => void saveQuantity(quantity + 1, quantity)}
+        >
+          +
+        </button>
+
+        {editing && (
+          <>
+            <button
+              type="button"
+              className="primary"
+              disabled={saving}
+              onClick={saveDraft}
+            >
+              {t('Enregistrer', 'Save')}
+            </button>
+
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                setEditing(false);
+                setMessage('');
+              }}
+            >
+              {t('Annuler', 'Cancel')}
+            </button>
+          </>
+        )}
       </div>
+
+      {!editing && (
+        <p style={{ fontSize: 12 }}>
+          {t(
+            'Cliquez sur la quantité pour la modifier.',
+            'Click the quantity to edit it.'
+          )}
+        </p>
+      )}
 
       <p role="status" style={{ fontSize: 12 }}>
         {saving ? t('Enregistrement…', 'Saving…') : message}
