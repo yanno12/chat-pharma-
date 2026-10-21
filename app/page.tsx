@@ -1002,43 +1002,63 @@ export default function Home() {
   }, []);
 
   async function loadAccount(userId: string) {
-    if (!supabase) return;
-    const version = ++loadVersion.current;
+  if (!supabase) return;
 
-    const profile = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
+  const version = ++loadVersion.current;
 
-    if (profile.error) throw profile.error;
-
-    const isAdmin = profile.data.role === 'admin';
-
-    const response = await supabase
-      .from('pharmacies')
-      .select('*')
-      .eq('owner_id', userId)
-      .maybeSingle();
-
-    if (response.error) throw response.error;
-
-    const ownPharmacy = response.data as Pharmacy | null;
-    const inventory = ownPharmacy
-      ? await readInventory(ownPharmacy.id)
-      : [];
-    const allPharmacies = isAdmin ? await readPharmacies() : [];
-
-    if (
-      version !== loadVersion.current ||
-      authUser.current !== userId
-    ) return;
-
-    setAdmin(isAdmin);
-    setPharmacy(ownPharmacy);
-    setStock(inventory);
-    setReviews(allPharmacies);
+  function isCurrentAccount() {
+    return (
+      version === loadVersion.current &&
+      authUser.current === userId
+    );
   }
+
+  const profile = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (profile.error) throw profile.error;
+  if (!isCurrentAccount()) return;
+
+  const isAdmin = profile.data.role === 'admin';
+
+  // Establish admin access before loading the other data.
+  setAdmin(isAdmin);
+
+  if (isAdmin) {
+    setTab(current => current === 'pharmacy' ? 'admin' : current);
+  }
+
+  const response = await supabase
+    .from('pharmacies')
+    .select('*')
+    .eq('owner_id', userId)
+    .maybeSingle();
+
+  if (response.error) throw response.error;
+  if (!isCurrentAccount()) return;
+
+  const ownPharmacy = response.data as Pharmacy | null;
+  setPharmacy(ownPharmacy);
+
+  const inventory = ownPharmacy
+    ? await readInventory(ownPharmacy.id)
+    : [];
+
+  if (!isCurrentAccount()) return;
+  setStock(inventory);
+
+  if (isAdmin) {
+    const allPharmacies = await readPharmacies();
+
+    if (!isCurrentAccount()) return;
+    setReviews(allPharmacies);
+  } else {
+    setReviews([]);
+  }
+}
 
   useEffect(() => {
     const userId = session?.user.id;
