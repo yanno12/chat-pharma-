@@ -11,13 +11,13 @@
   "theme_color": "#064b78",
   "icons": [
     {
-      "src": "/pwa-icon?size=192",
+      "src": "/pwa-icon?size=192&v=2",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-icon?size=512",
+      "src": "/pwa-icon?size=512&v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
