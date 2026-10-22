@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "PharmaStock",
+  "short_name": "PharmaStock",
+  "description": "Trouvez vos médicaments et gérez votre pharmacie en Afrique.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#064b78",
+  "icons": [
+    {
+      "src": "/pwa-icon?size=192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon?size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
