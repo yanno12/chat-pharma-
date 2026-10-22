@@ -14,8 +14,8 @@ export async function GET(request: Request) {
       ? 180
       : 512;
 
-  const logo = await readFile(
-    join(process.cwd(), 'public', 'logo.png')
+  const icon = await readFile(
+    join(process.cwd(), 'public', 'app-icon.png')
   );
 
   const image = createElement(
@@ -27,13 +27,14 @@ export async function GET(request: Request) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         backgroundColor: '#ffffff',
       },
     },
     createElement('img', {
-      src: `data:image/png;base64,${logo.toString('base64')}`,
-      width: size - 24,
-      height: size - 24,
+      src: `data:image/png;base64,${icon.toString('base64')}`,
+      width: size,
+      height: size,
       style: {
         objectFit: 'contain',
       },
