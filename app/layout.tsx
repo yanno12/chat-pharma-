@@ -17,19 +17,19 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/pwa-icon?size=192',
+        url: '/pwa-icon?size=192&v=2',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        url: '/pwa-icon?size=512',
+        url: '/pwa-icon?size=512&v=2',
         sizes: '512x512',
         type: 'image/png',
       },
     ],
     apple: [
       {
-        url: '/pwa-icon?size=180',
+        url: '/pwa-icon?size=180&v=2',
         sizes: '180x180',
         type: 'image/png',
       },
